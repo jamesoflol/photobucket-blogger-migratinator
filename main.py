@@ -28,6 +28,7 @@ def list_blogs(auth):
 	return json_obj['items']
 
 
+# Recursive function, recurses through paginated results, 10 posts per page.
 def list_posts(auth, blog_id, page_token=None, page_num=0):
 	url = "https://www.googleapis.com/blogger/v3/blogs/{0}/posts".format(blog_id)
 	headers = {
@@ -39,15 +40,18 @@ def list_posts(auth, blog_id, page_token=None, page_num=0):
 
 	# HTTP GET
 	r = requests.get(url, headers=headers, params=params)
-	#print('http status: ' + str(r.status_code))
 	r.raise_for_status() # Raise an exception if HTTP status code not 2xx
-	#print(r.text)
+	#print('http status: ' + str(r.status_code))
+	print(r.text)
 
 	# Get json from result
 	json_obj = json.loads(r.text)
 	# Get list from json
-	results = json_obj['items']
-	print("Got page {0}.".format(page_num))
+	if 'items' in json_obj:
+		results = json_obj['items']
+	else:
+		results = []
+	#print("Got page {0}.".format(page_num))
 
 	# Looks for another page of results
 	nextPageToken = None
@@ -58,8 +62,8 @@ def list_posts(auth, blog_id, page_token=None, page_num=0):
 
 	if nextPageToken:
 		# Recurse this function to get the next page of results
-		print("page {0} done. on to : {1}".format(str(page_num), nextPageToken))
-		next_results = list_posts(auth, blog, nextPageToken, page_num+1)
+		print("Page {0} done. Found approx {1} posts so far. On to page ID: {2}".format(page_num, page_num*10+len(results), nextPageToken))
+		next_results = list_posts(auth, blog_id, nextPageToken, page_num+1)
 
 		# Combine the recursed function's results with this one in to mega result
 		for item in next_results:
@@ -166,7 +170,7 @@ if __name__ == '__main__':
 	print('- Picasa: https://picasaweb.google.com/data/')
 	print('Click Authorize APIs. Follow prompts to log in with the Google account you use for Blogger')
 	print('Under Step 2, click "Exchange authorization code for tokens"')
-	auth_token = 'Bearer ' + raw_input("Paste the Access token here, and press enter: (It'll start with something like ya29.GlulBJ...): ")
+	auth_token = 'Bearer ' + raw_input("Paste the 'Access token' here, and press enter: (It'll start with something like ya29.GlulBJ...): ")
 
 	all_my_blogs = list_blogs(auth_token)
 	print("")
@@ -181,6 +185,7 @@ if __name__ == '__main__':
 
 	print("Gathering list of all blog posts. This can take a while...")
 	all_blog_posts = list_posts(auth_token, all_my_blogs[blog_num]['id'])
+	print("Found {0} posts.".format(len(all_blog_posts)))
 
 	print("")
 	raw_input("OK, now we're going to process/update a single blog post. This is for real. It will edit your blog live. Press ENTER to proceed. Press CTRL+C to exit.")

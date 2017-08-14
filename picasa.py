@@ -22,7 +22,7 @@ def upload_image_to_picasa(auth, image_binary, filename):
 	r = requests.post(url, headers=headers, data=image_binary)
 
 	# print(r.text)
-	print('file upload http status: ' + str(r.status_code)) # 201 = Created
+	# print('file upload http status: ' + str(r.status_code)) # 201 = Created
 	r.raise_for_status()
 
 	# Get URL of uploaded image
