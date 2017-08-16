@@ -4,6 +4,8 @@ import re
 import urllib2
 import sys
 import hashlib
+import multiprocessing
+# import itertools
 import picasa # picasa.py in this folder
 
 def list_blogs(auth):
@@ -13,14 +15,12 @@ def list_blogs(auth):
 	}
 
 	# GET
-	try:
-		r = requests.get(url, headers=headers)
-		#print('http status: ' + str(r.status_code))
-		#print(r.text)
-		r.raise_for_status() # Raise an exception if HTTP status code not 2xx
-	except Exception as err:
-		print(err)
-		sys.exit(1)
+	# try:
+	r = requests.get(url, headers=headers)
+	r.raise_for_status() # Raise an exception if HTTP status code not 2xx
+	# except Exception as err:
+	# 	print(err)
+	# 	sys.exit(1)
 
 	# Get blog urls and ids	
 	json_obj = json.loads(r.text)
@@ -42,7 +42,7 @@ def list_posts(auth, blog_id, page_token=None, page_num=0):
 	r = requests.get(url, headers=headers, params=params)
 	r.raise_for_status() # Raise an exception if HTTP status code not 2xx
 	#print('http status: ' + str(r.status_code))
-	print(r.text)
+	#print(r.text)
 
 	# Get json from result
 	json_obj = json.loads(r.text)
@@ -60,7 +60,7 @@ def list_posts(auth, blog_id, page_token=None, page_num=0):
 	except:
 		pass
 
-	if nextPageToken:
+	if nextPageToken and page_num < 5:
 		# Recurse this function to get the next page of results
 		print("Page {0} done. Found approx {1} posts so far. On to page ID: {2}".format(page_num, page_num*10+len(results), nextPageToken))
 		next_results = list_posts(auth, blog_id, nextPageToken, page_num+1)
@@ -77,7 +77,7 @@ def list_posts(auth, blog_id, page_token=None, page_num=0):
 # Update a single post 
 # Params:
 # - post: dict var from json_obj['items']. post keys = content, url, id, etc.
-def edit_post(auth, post, debug=False):
+def edit_post(post):
 	# Find all urls in post content
 	regexString = "(?:'|\")(https*:\/\/.+?)(?:'|\")" # Finds URLs
 	all_urls = re.findall(regexString, post['content'])
@@ -119,34 +119,44 @@ def edit_post(auth, post, debug=False):
 
 	# Were any photos updated?
 	if len(photobucket_photos_de_duped) > 0:
-		#print('The following links have been replaced with Google Photos:')
-		#print(str(photobucket_photos_de_duped))
-		# Save content changes. Or if debug=True then it'll just print the list of proposed changes
-		if debug:
-			print('Not saving changes - this was a debug/test run. New content would be: ')
-			print(post['content'])
-		else:
-			print('Saved changes. See result at: ' + post['url'])
+		# Save content changes
+		url = "https://www.googleapis.com/blogger/v3/blogs/{0}/posts/{1}".format(blog_id, post['id'])
+		headers = {
+			'Authorization': auth,
+			'Content-Type': 'application/json'
+		}
+		data_obj = dict()
+		data_obj['content'] = post['content']
+		data = json.dumps(data_obj)
+		# HTTP PATCH (Just editing one item, rather than PUT or POST)
+		r = requests.patch(url, headers=headers, data=data)
+		r.raise_for_status() # Raise an exception if HTTP status code not 2xx
+
+		print('Saved changes. See result at: ' + post['url'])
 
 		return True
 	else:
+		print('No changes at: ' + post['url'])
+
 		return False
 
 
 # Update all posts for a single blog
-def edit_all_posts(auth, all_blog_posts, debug=False):
-	for single_post in all_blog_posts:
-		try:
-			edit_post(auth_token, single_post, debug)
-		except requests.exceptions.HTTPError as err:
-			print 'ERROR: ' + err
+def edit_all_posts(auth, all_blog_posts):
+	# for single_post in all_blog_posts:
+	# 	try:
+	# 		edit_post(single_post)
+	# 	except requests.exceptions.HTTPError as err:
+	# 		print 'ERROR: ' + err
+	pool = multiprocessing.Pool(processes = 20)
+	results = pool.map(edit_post, all_blog_posts)
 
 
-def find_and_edit_single_post(auth, all_blog_posts, debug=False):
+def find_and_edit_single_post(auth, all_blog_posts):
 	processed_index = None
 	for index, single_post in enumerate(all_blog_posts):
 
-		actually_changed_something = edit_post(auth, single_post, False)
+		actually_changed_something = edit_post(single_post)
 
 		# problem with this is that it'll forever look at the one where nothing 
 		if actually_changed_something:
@@ -170,9 +180,9 @@ if __name__ == '__main__':
 	print('- Picasa: https://picasaweb.google.com/data/')
 	print('Click Authorize APIs. Follow prompts to log in with the Google account you use for Blogger')
 	print('Under Step 2, click "Exchange authorization code for tokens"')
-	auth_token = 'Bearer ' + raw_input("Paste the 'Access token' here, and press enter: (It'll start with something like ya29.GlulBJ...): ")
+	auth = 'Bearer ' + raw_input("Paste the 'Access token' here, and press enter: (It'll start with something like ya29.GlulBJ...): ")
 
-	all_my_blogs = list_blogs(auth_token)
+	all_my_blogs = list_blogs(auth)
 	print("")
 	print("Here's a list of your blogs: ")
 	for index, blog in enumerate(all_my_blogs):
@@ -184,25 +194,32 @@ if __name__ == '__main__':
 		blog_num = 0
 
 	print("Gathering list of all blog posts. This can take a while...")
-	all_blog_posts = list_posts(auth_token, all_my_blogs[blog_num]['id'])
+	blog_id = all_my_blogs[blog_num]['id']
+	all_blog_posts = list_posts(auth, blog_id)
 	print("Found {0} posts.".format(len(all_blog_posts)))
 
 	print("")
 	raw_input("OK, now we're going to process/update a single blog post. This is for real. It will edit your blog live. Press ENTER to proceed. Press CTRL+C to exit.")
 
-	while True:
-		single_post_edit_result = find_and_edit_single_post(auth_token, all_blog_posts)
-		if single_post_edit_result['success']:
-			processed_index = single_post_edit_result['processed_index']
-			del all_blog_posts[processed_index] # Remove the one we've already processed so it doesn't try again on the next loop
-		else:
-			print("No remaining posts with photobucket links. I think we're all done!")
-			break
+	try:
+		while True:
+			single_post_edit_result = find_and_edit_single_post(auth, all_blog_posts)
+			if single_post_edit_result['success']:
+				processed_index = single_post_edit_result['processed_index']
+				del all_blog_posts[processed_index] # Remove the one we've already processed so it doesn't try again on the next loop
+			else:
+				print("No remaining posts with photobucket links. I think we're all done!")
+				break
 
-		do_one_or_all = raw_input("Please check the URL above in a browser. If you're happy... Press ENTER to do one more, or type ALL and press enter to do the rest, or pretty CTRL+C to exit: ") # Blank = str = ''
-		if do_one_or_all.lower() == "all":
-			edit_all_posts(auth_token, all_blog_posts)
-			print("All posts edited.")
-			break
+			do_one_or_all = raw_input("Please check the URL above in a browser. If you're happy... Press ENTER to do one more, or type ALL and press enter to do the rest, or pretty CTRL+C to exit: ") # Blank = str = ''
+			if do_one_or_all.lower() == "all":
+				edit_all_posts(auth, all_blog_posts)
+				print("All posts edited.")
+				break
 
-	raw_input("Press enter to exit.")
+		raw_input("Press enter to exit.")
+	except requests.exceptions.HTTPError as err:
+		#print(err.response.status_code) #e.g., '401'
+		if err.response.status_code == 401:
+			print("ERROR: HTTP 401 error. Your authorization code from https://developers.google.com/oauthplayground/ may have expired - it only lasts for 1 hour. Start program again to start where we left off.")
+
