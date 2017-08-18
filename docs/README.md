@@ -1,6 +1,6 @@
 ## Welcome to Photobucket->Blogger Migratinator
 
-This small app is for anyone who's got Blogger blog posts that have (now broken) Photobucket embedded images. It automatically migrates your photos from Photobucket to Blogger. It isn't quite possible to actually put the photos in to your Blogger the same way that you would upload new photos, but the next best thing is that we put them in to Google Photos.
+This small app is for anyone who's got Blogger blog posts that contain (now broken) Photobucket embedded images. It automatically migrates your photos from Photobucket to Blogger. It isn't quite possible to actually put the photos in to your Blogger the same way that you would upload new photos, but the next best thing is that we put them in to Google Photos.
 
 This app requires access access to your Google account. To be prudent, it will only ask for access to the Blogger and Google Photos parts of your account.
 
