@@ -20,3 +20,5 @@ var authcode = getParameterByName('code');
 // Display it on screen
 document.getElementsByTagName('Blockquote')[0].innerHTML = authcode;
 </script>
+
+Please don't share this code with anyone you don't trust. It's only for use in the Migratinator.
