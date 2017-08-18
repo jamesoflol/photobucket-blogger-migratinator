@@ -2,7 +2,7 @@ Below is your Google authentication code for pasting in to the Photobucket Blogg
 
 > Your Google authentication code should appear here. If you're seeing this message, you may have navigated to this page directly. You should only arrive here via [https://jamesoflol.github.io/photobucket-blogger-migratinator](https://jamesoflol.github.io/photobucket-blogger-migratinator).
 
-Please don't share this code with anyone you don't trust. It's only for use in the Migratinator.
+This code can only be used once - each time you run the app you'll need a new one. Please don't share this code with anyone you don't trust. It's only for use in the Migratinator.
 
 <script>
 // Simple script for grabbing parameter name from the browser URL bar
