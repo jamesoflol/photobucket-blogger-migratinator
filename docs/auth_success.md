@@ -1,4 +1,6 @@
-> Your Google authentication code should appear here
+Below is your Google authentication code for pasting in to the Photobucket Blogger Migratinator app.
+
+> Your Google authentication code should appear here. If you're seeing this message, you may have navigated to this page directly. You should only arrive here via [https://jamesoflol.github.io/photobucket-blogger-migratinator](https://jamesoflol.github.io/photobucket-blogger-migratinator).
 
 <script>
 // Simple script for grabbing parameter name from the browser URL bar
