@@ -14,12 +14,12 @@ def upload_image_to_picasa(auth, image_binary, filename):
 	headers = {
 		'Content-Type': content_type, 
 		'Slug': 'Blog Import ' + datetime.now().strftime('%Y-%m-%d') + ' - ' + filename + ' - ' + str(uuid.uuid4().hex), # Unique filename because there will be dupes
-		'Authorization': auth, 
+		'Authorization': 'Bearer ' + auth, 
 		'Gdata-version': '2'
 	}
 
 	# POST the image
-	r = requests.post(url, headers=headers, data=image_binary)
+	r = requests.post(url, headers=headers, data=image_binary, timeout=10)
 
 	# print(r.text)
 	# print('file upload http status: ' + str(r.status_code)) # 201 = Created
