@@ -3,7 +3,6 @@ import json
 import re
 import sys
 import hashlib
-import multiprocessing
 import picasa # picasa.py in this folder
 from oauth import Oauth # oauth.py in this folder
 
