@@ -162,6 +162,7 @@ def edit_post(post, quiet=False, is_retry=False):
 					# Set album_id to that of the next 'migratinator' album in the list
 					print("Photo album full. Selecting next one.")
 					try:
+						global album_id
 						album_id = photo_albums[photo_albums.index(album_id) + 1]
 					except:
 						print("No more albums to select.")
@@ -208,7 +209,7 @@ if __name__ == '__main__':
 	print("INSTRUCTIONS:")
 	print("First, backup your blog. Blogger->Settings->Other->Import & back up")
 	print("Go to https://jamesoflol.github.io/photobucket-blogger-migratinator")
-	print("Under Step 2, click 'AUTHENTICATE WITH GOOGLE NOW'. Follow prompts to log in with the Google account you use for Blogger.")
+	print("Under Step 4, click 'AUTHENTICATE WITH GOOGLE NOW'. Follow prompts to log in with the Google account you use for Blogger.")
 	auth_code = raw_input("Paste the 'Authentication code' here, and press enter: (It'll start with something like 4/Y2_b...): ").strip()
 	oauth = Oauth(auth_code)
 	print("Got access token: " + oauth.access_token)
