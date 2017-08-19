@@ -5,7 +5,7 @@ This small app is for anyone who's got Blogger blog posts that contain (now brok
 Steps:
 
 1. The first thing you'll have to do is create 'albums' for the photos to go in to in Google Photos. Albums have a limit of 2,000 photos per album, so you might have to create several.
-    1. Go to https://photos.google.com
+    1. Go to [https://photos.google.com]
     2. Click 'Albums' on the left
     3. Click 'New album'
     4. Creating an album requires having at least one photo to put in it. (If you have zero photos in Google Photos right now, you'll need to upload a dummy one.) Select any one of your photos.
