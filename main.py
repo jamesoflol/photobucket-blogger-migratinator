@@ -75,108 +75,112 @@ def list_posts(blog_id, page_token=None, page_num=0):
 # Update a single post 
 # Params:
 # - post: dict var from json_obj['items']. post keys = content, url, id, etc.
-def edit_post(post, quiet=False):
-	# Find all urls in post content
-	regexString = "(?:'|\")(https*:\/\/.+?)(?:'|\")" # Finds URLs
-	all_urls = re.findall(regexString, post['content'])
+def edit_post(post, quiet=False, is_retry=False):
+	try:
+		# Find all urls in post content
+		regexString = "(?:'|\")(https*:\/\/.+?)(?:'|\")" # Finds URLs
+		all_urls = re.findall(regexString, post['content'])
 
-	# Filter for just the photobucket.com image links
-	photobucket_urls = []
-	allowed_suffixes = ('png','PNG','jpg','JPG','jpeg','JPEG','bmp','BMP','gif','GIF') # This is all Picasa allows
-	for url in all_urls:
-		if 'photobucket.com/' in url and url.endswith(allowed_suffixes):
-			#print('Found URL: ' + url)
-			if "https://" in url:
-				url = url.replace("https://", "http://")
-				#print('Replacing with: ' + url) # Some posts have both a HTTPS img src and a HTTPS link
-			photobucket_urls.append(url)
+		# Filter for just the photobucket.com image links
+		photobucket_urls = []
+		allowed_suffixes = ('png','PNG','jpg','JPG','jpeg','JPEG','bmp','BMP','gif','GIF') # This is all Picasa allows
+		for url in all_urls:
+			if 'photobucket.com/' in url and url.endswith(allowed_suffixes):
+				#print('Found URL: ' + url)
+				if "https://" in url:
+					url = url.replace("https://", "http://")
+					#print('Replacing with: ' + url) # Some posts have both a HTTPS img src and a HTTPS link
+				photobucket_urls.append(url)
 
-	photobucket_photos_de_duped = list(set(photobucket_urls))
+		photobucket_photos_de_duped = list(set(photobucket_urls))
 
-	# For each image, download from photobucket, upload to picasa, and update the image link in the post content
-	for url in photobucket_photos_de_duped:
-		# Download image from photobucket
-		headers = {
-			'Referer': url + '.html'
-		}
-		r = requests.get(url, headers=headers, timeout=5)
-		r.raise_for_status()
-		image_binary = r.content
+		# For each image, download from photobucket, upload to picasa, and update the image link in the post content
+		for url in photobucket_photos_de_duped:
+			# Download image from photobucket
+			headers = {
+				'Referer': url + '.html'
+			}
+			r = requests.get(url, headers=headers, timeout=5)
+			r.raise_for_status()
+			image_binary = r.content
 
-		# req = urllib2.Request(url)
-		# req.add_header('Referer', url + '.html') # The referer HTTP header is how photobucket prevents hotlinking/downloading your images
-		# response = urllib2.urlopen(req)
-		# image_binary = response.read()
+			# Check to make sure we haven't accidentally downloaded the photobucket pay-up notice image
+			md5_hash = hashlib.md5(image_binary).hexdigest()
+			if md5_hash == 'aafa26a6610d377d8e42f44bc7e76635':
+				raise Exception("It looks like something's gone wrong and we've accidentally downloaded the photobucket pay-up notice image.")
 
-		# Check to make sure we haven't accidentally downloaded the photobucket pay-up notice image
-		md5_hash = hashlib.md5(image_binary).hexdigest()
-		if md5_hash == 'aafa26a6610d377d8e42f44bc7e76635':
-			raise Exception("It looks like something's gone wrong and we've accidentally downloaded the photobucket pay-up notice image.")
+			# Upload image to picasa
+			filename = url.split("/")[-1:][0] # Grabs everythign after the last slash
+			google_image_url = picasa.upload_image_to_picasa(oauth.access_token, image_binary, filename, photo_album_id)
 
-		# Upload image to picasa
-		filename = url.split("/")[-1:][0] # Grabs everythign after the last slash
-		google_image_url = picasa.upload_image_to_picasa(oauth.access_token, image_binary, filename)
+			# Update URLs in blog post content from photobucket to google
+			post['content'] = post['content'].replace(url, google_image_url)
+			# Also update the httpS version of any such url
+			post['content'] = post['content'].replace(url.replace("http://","https://"), google_image_url)
 
-		# Update URLs in blog post content from photobucket to google
-		post['content'] = post['content'].replace(url, google_image_url)
-		# Also update the httpS version of any such url
-		post['content'] = post['content'].replace(url.replace("http://","https://"), google_image_url)
+		# Were any photos updated?
+		if len(photobucket_photos_de_duped) > 0:
+			# Save content changes
+			url = "https://www.googleapis.com/blogger/v3/blogs/{0}/posts/{1}".format(blog_id, post['id'])
+			headers = {
+				'Authorization': 'Bearer ' + oauth.access_token,
+				'Content-Type': 'application/json'
+			}
+			data_obj = dict()
+			data_obj['content'] = post['content']
+			data = json.dumps(data_obj)
+			# HTTP PATCH (Just editing one value, rather than PUT which replaces all)
+			r = requests.patch(url, headers=headers, data=data, timeout=5)
+			r.raise_for_status() # Raise an exception if HTTP status code not 2xx
 
-	# Were any photos updated?
-	if len(photobucket_photos_de_duped) > 0:
-		# Save content changes
-		url = "https://www.googleapis.com/blogger/v3/blogs/{0}/posts/{1}".format(blog_id, post['id'])
-		headers = {
-			'Authorization': 'Bearer ' + oauth.access_token,
-			'Content-Type': 'application/json'
-		}
-		data_obj = dict()
-		data_obj['content'] = post['content']
-		data = json.dumps(data_obj)
-		# HTTP PATCH (Just editing one value, rather than PUT which replaces all)
-		r = requests.patch(url, headers=headers, data=data, timeout=5)
-		r.raise_for_status() # Raise an exception if HTTP status code not 2xx
+			print('Saved changes. See result at: ' + post['url'])
 
-		print('Saved changes. See result at: ' + post['url'])
+			return True
 
-		return True
-	else:
-		if not quiet:
-			print('No changes at: ' + post['url'])
+		else:
+			if not quiet:
+				print('No changes at: ' + post['url'])
 
-		return False
+			return False
+
+	except Exception as err:
+		if is_retry:
+			# Print err and exit
+			print("ERROR ON RETRY: {0}. Post {1}".format(err, post['url']))
+			print("Exiting.")
+			raise
+
+		else:
+			# Attempt to fix the error, and try this post again
+			if type(err) == requests.exceptions.HTTPError:
+		 		if err.response.status_code == 401:
+					# Access token might have expired (1 hour)
+					print("Access token might have expired (1 hour). Refreshing and trying again.")
+					oauth.refresh_access_token()
+
+				elif err.response.text == "Photo limit reached.":
+					# Set album_id to that of the next 'migratinator' album in the list
+					print("Photo album full. Selecting next one.")
+					try:
+						album_id = photo_albums[photo_albums.index(album_id) + 1]
+					except:
+						print("No more albums to select.")
+						raise
+
+			elif type(err) == requests.exceptions.ReadTimeout:
+				print("ERROR: Network timeout. Trying this post again.")
+
+			else:
+				print("ERROR: {0}. Retrying post {1}".format(err, post['url']))
+
+			# Try this post again
+			return edit_post(post, quiet, True)
 
 
 # Update all posts for a single blog
 def edit_all_posts(all_blog_posts):
 	for single_post in all_blog_posts:
-		error = False
-		try:
-			edit_post(single_post)
-			error = False
-		except requests.exceptions.HTTPError as err:
-			if error:
-				print("Consequtive errors detected. Exiting program.")
-				sys.exit(1)
-			else:
-				if err.response.status_code == 401:
-					# Access token might have expired (1 hour)
-					print("Access token might have expired (1 hour). Refreshing and trying again.")
-					oauth.refresh_access_token()
-					# Try this post again
-					edit_post(single_post)
-				else:
-					# Print err and try the next post
-					print("ERROR: {0}. Skipping {1}".format(err, single_post['url']))
-				error = True
-		except requests.exceptions.ReadTimeout as err:
-			if error:
-				print("Consecutive errors detected. Exiting program.")
-				sys.exit(1)
-			else:
-				# Print err and try the next post
-				print("ERROR: {0}. Skipping {1}".format(err, single_post['url']))
-				error = True
+		edit_post(single_post)
 
 	## took out multiprocessing. so much pain. if you'd like to try, replace above with below
 	# pool = multiprocessing.Pool(processes = 20)
@@ -203,8 +207,8 @@ if __name__ == '__main__':
 	print("")
 	print("INSTRUCTIONS:")
 	print("First, backup your blog. Blogger->Settings->Other->Import & back up")
-	print('Go to https://jamesoflol.github.io/photobucket-blogger-migratinator')
-	print('Under Step 2, click "AUTHENTICATE WITH GOOGLE NOW". Follow prompts to log in with the Google account you use for Blogger.')
+	print("Go to https://jamesoflol.github.io/photobucket-blogger-migratinator")
+	print("Under Step 2, click 'AUTHENTICATE WITH GOOGLE NOW'. Follow prompts to log in with the Google account you use for Blogger.")
 	auth_code = raw_input("Paste the 'Authentication code' here, and press enter: (It'll start with something like 4/Y2_b...): ").strip()
 	oauth = Oauth(auth_code)
 	print("Got access token: " + oauth.access_token)
@@ -227,6 +231,16 @@ if __name__ == '__main__':
 	print("Found {0} posts.".format(len(all_blog_posts)))
 
 	print("")
+	print("Gathering list of your Google Photo albums that contain the word 'migratinator'")
+	print("")
+	photo_albums = picasa.get_list_of_albums(oauth.access_token)
+	if len(photo_albums) > 0:
+		photo_album_id = photo_albums[0]
+	else:
+		print("No appropriate albums found. Will use the inbuilt album called 'drop box'. Note that there will be a limit of 2000 photos.")
+		photo_album_id = "default"
+
+	print("")
 	raw_input("OK, now we're going to process/update a single blog post. This is for real. It will edit your blog live. Press ENTER to proceed. Press CTRL+C to exit.")
 
 	try:
@@ -245,11 +259,7 @@ if __name__ == '__main__':
 				print("All posts edited.")
 				break
 
-		raw_input("Press enter to exit.")
-	except requests.exceptions.HTTPError as err:
-		#print(err.response.status_code) #e.g., '401'
-		if err.response.status_code == 401:
-			print("ERROR: HTTP 401 error. Your authorization code from https://developers.google.com/oauthplayground/ may have expired - it only lasts for 1 hour. Start program again to start where we left off.")
-		else:
-			print("ERROR: " + str(err))
+	except Exception as err:
+		print("ERROR: " + str(err))
 
+	raw_input("Press enter to exit.")
