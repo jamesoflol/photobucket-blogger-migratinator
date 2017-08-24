@@ -20,7 +20,7 @@ function getParameterByName(name, url) {
 var authcode = getParameterByName('code');
 
 // Display it on screen
-if (authcode != '') {
+if (authcode != null) {
     document.getElementsByTagName('Blockquote')[0].innerHTML = authcode;
 }
 </script>
