@@ -2,7 +2,7 @@ This small app is for anyone who's got Blogger blog posts that contain (now brok
 
 ### Steps:
 
-1. The first thing you'll have to do is create 'albums' for the photos to go in to in Google Photos. Albums have a limit of 2,000 photos per album, so you might have to create several.
+1. (If you have less than ~2,000 photos to fix, you can skip to step 2.) The first thing you'll have to do is create 'albums' for the photos to go in to in Google Photos. Albums have a limit of 2,000 photos per album, so you might have to create several.
     1. Go to [https://photos.google.com](https://photos.google.com)
     2. Click 'Albums' on the left
     3. Click 'New album'
@@ -15,5 +15,6 @@ This small app is for anyone who's got Blogger blog posts that contain (now brok
 4. The first thing the program will ask you to do is to authenticate with Google. You do that by clicking this link: [AUTHENTICATE WITH GOOGLE NOW](https://accounts.google.com/o/oauth2/v2/auth?redirect_uri=https://jamesoflol.github.io/photobucket-blogger-migratinator/auth_success&prompt=consent&response_type=code&client_id=475469684563-3tkh3bscomb3548fq4fs8fg7b5t34qlf.apps.googleusercontent.com&scope=https://www.googleapis.com/auth/blogger+https://picasaweb.google.com/data/&access_type=offline). This app requires access access to your Google account. To be prudent, upon following the link you will see that it only asks for access to the Blogger and Google Photos parts of your account.
 
 ### Misc notes:
-* The pictures linked will be a max of 512px wide. This is because of a limitation in the Google Photos API (it's a pretty horrible API :(). But note that the underlying photos are actually full res. So if you were to browse through your photos at photos.google.com you could find the full-res picture, 'copy image url' on it, and put the full thing back in. Hopefully the 512px versions work for most needs.
+* The pictures linked will be a max of 512px wide. This is because of a limitation in the Google Photos API (it's a pretty horrible API D:). But note that the underlying photos are actually full res. So if you were to browse through your photos at photos.google.com you could find the full-res picture, 'copy image url' on it, and put the full thing back in. Hopefully the 512px versions work for most needs.
+* The pictures will sit alongside all your other Google Photos, if you have ever used Google Photos. If you've got a huge backlog to be migrated (why else would you be using the script) then you'll never be able to pick out your existing photos again. I suggest adding all your existing photos to another photo album(s) before you start.
 * For the nerds/security conscious: Instead of downloading, you can clone, inspect, and run the Python source from https://github.com/jamesoflol/photobucket-blogger-migratinator. It's been tested with Python 2.7.10. The only dependency is the python requests module (pip install requests). Please feel free to raise issues or pull requests.
