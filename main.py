@@ -75,7 +75,7 @@ def list_posts(blog_id, page_token=None, page_num=0):
 # Update a single post 
 # Params:
 # - post: dict var from json_obj['items']. post keys = content, url, id, etc.
-def edit_post(post, quiet=False, is_retry=False):
+def edit_post(post, quiet=False, is_retry=0):
 	try:
 		# Find all urls in post content
 		regexString = "(?:'|\")(https*:\/\/.+?)(?:'|\")" # Finds URLs
@@ -94,13 +94,15 @@ def edit_post(post, quiet=False, is_retry=False):
 
 		photobucket_photos_de_duped = list(set(photobucket_urls))
 
-		# For each image, download from photobucket, upload to picasa, and update the image link in the post content
+		# For each image, download from photobucket, upload to picasa, and update the image link in the post content (local, in memory)
 		for url in photobucket_photos_de_duped:
 			# Download image from photobucket
 			headers = {
 				'Referer': url + '.html'
 			}
 			r = requests.get(url, headers=headers, timeout=5)
+			if r.status_code == 404:
+				raise Exception("Photobucket download error 404.")
 			r.raise_for_status()
 			image_binary = r.content
 
@@ -118,7 +120,7 @@ def edit_post(post, quiet=False, is_retry=False):
 			# Also update the httpS version of any such url
 			post['content'] = post['content'].replace(url.replace("http://","https://"), google_image_url)
 
-		# Were any photos updated?
+		# Were any photos updated locally? If so, update the Blogger post
 		if len(photobucket_photos_de_duped) > 0:
 			# Save content changes
 			url = "https://www.googleapis.com/blogger/v3/blogs/{0}/posts/{1}".format(blog_id, post['id'])
@@ -144,29 +146,40 @@ def edit_post(post, quiet=False, is_retry=False):
 			return False
 
 	except Exception as err:
-		if is_retry:
-			# Print err and exit
-			print("ERROR ON RETRY: {0}. Post {1}".format(err, post['url']))
-			print("Exiting.")
-			raise
+		if is_retry > 1:
+			print("ERROR ON RETRY: {0}. Skipping this post: {1}".format(err, post['url']))
+			if type(err) == requests.exceptions.HTTPError:
+				print("Error reason: " + err.response.text)
+			return False
+
+			# else:
+			# 	# Print err and exit
+			# 	print("ERROR ON RETRY: {0}. Post {1}".format(err, post['url']))
+			# 	print("Exiting.")
+			# 	raise
 
 		else:
 			# Attempt to fix the error, and try this post again
 			if type(err) == requests.exceptions.HTTPError:
-		 		if err.response.status_code == 401:
-					# Access token might have expired (1 hour)
-					print("Access token might have expired (1 hour). Refreshing and trying again.")
-					oauth.refresh_access_token()
-
-				elif err.response.text == "Photo limit reached.":
-					# Set album_id to that of the next 'migratinator' album in the list
+				if err.response.text == "Photo limit reached.":
+					# Set photo_album_id to that of the next 'migratinator' album in the list
 					print("Photo album full. Selecting next one.")
 					try:
-						global album_id
-						album_id = photo_albums[photo_albums.index(album_id) + 1]
+						global photo_album_id
+						photo_album_id = photo_albums[photo_albums.index(photo_album_id) + 1]
 					except:
 						print("No more albums to select.")
 						raise
+
+				elif err.response.text == "Not a valid image.":
+					print("Skipping post. Not editing post because Google Photos rejecting invalid image on page: " + post['url'])
+					return False
+
+		 		elif err.response.reason == "Unauthorized" or err.response.text == "Token invalid - Invalid token: Token expired.":
+					# Access token might have expired (1 hour)
+					# "Unauthorized" is from Blogger, "Token invalid..." is from Picasa
+					print("Access token might have expired (1 hour). Refreshing and trying again.")
+					oauth.refresh_access_token()
 
 			elif type(err) == requests.exceptions.ReadTimeout:
 				print("ERROR: Network timeout. Trying this post again.")
@@ -175,7 +188,7 @@ def edit_post(post, quiet=False, is_retry=False):
 				print("ERROR: {0}. Retrying post {1}".format(err, post['url']))
 
 			# Try this post again
-			return edit_post(post, quiet, True)
+			return edit_post(post, quiet, is_retry + 1)
 
 
 # Update all posts for a single blog
@@ -186,7 +199,6 @@ def edit_all_posts(all_blog_posts):
 	## took out multiprocessing. so much pain. if you'd like to try, replace above with below
 	# pool = multiprocessing.Pool(processes = 20)
 	# results = pool.map(edit_post, all_blog_posts)
-
 
 def find_and_edit_single_post(all_blog_posts):
 	processed_index = None
@@ -222,7 +234,9 @@ if __name__ == '__main__':
 
 	print("")
 	blog_num = raw_input("Type the number of the blog you want to work on: Default [0]: ")
-	if not blog_num:
+	if blog_num:
+		blog_num = int(blog_num)
+	else:
 		blog_num = 0
 
 	print("")
@@ -262,5 +276,9 @@ if __name__ == '__main__':
 
 	except Exception as err:
 		print("ERROR: " + str(err))
+		try:
+			print("ERROR REASON: " + str(err.response.text))
+		except:
+			print("No additional error reason.")
 
 	raw_input("Press enter to exit.")

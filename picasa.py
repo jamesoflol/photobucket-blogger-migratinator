@@ -19,7 +19,7 @@ def upload_image_to_picasa(auth, image_binary, filename, album_id='default'):
 	}
 
 	# POST the image
-	r = requests.post(url, headers=headers, data=image_binary, timeout=10)
+	r = requests.post(url, headers=headers, data=image_binary, timeout=20)
 	# print('file upload http status: ' + str(r.status_code)) # 201 = Created
 	r.raise_for_status()
 
