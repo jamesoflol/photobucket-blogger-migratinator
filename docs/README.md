@@ -34,7 +34,8 @@ s.setAttribute('data-timestamp', +new Date());
 (d.head || d.body).appendChild(s);
 })();
 </script>
-   
+
+
 MIT License
 
 Copyright (c) 2017 jamesoflol
