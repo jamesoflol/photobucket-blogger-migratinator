@@ -1,6 +1,6 @@
 This small app is for anyone who's got Blogger blog posts that contain (now broken) Photobucket embedded images. It automatically migrates your photos from Photobucket to Google Photos, and then updates all your Blogger posts with the new links.
 
-Please use with caution, backup your blog, and note the liability waiver at the bottom of this page. Please use the discussion/comments thingo at the bottom of this page if you have any questions and I'll help as best I can.
+Please use with caution, backup your blog, and note the liability waiver at the bottom of this page. Please use the discussion/comments thingo at the bottom of this page if you have any questions and I'll help as best I can. If you make use of this, all I ask is that you spread the word to others that are affected.
 
 ### Steps:
 
