@@ -22,20 +22,6 @@ Please use with caution, backup your blog, and note the liability waiver at the 
 * The pictures will sit alongside all your other Google Photos, if you have ever used Google Photos. If you've got a huge backlog to be migrated (why else would you be using the script) then you'll never be able to pick out your existing photos again. I suggest adding all your existing photos to another photo album(s) before you start.
 * For the nerds/security conscious: Instead of downloading, you can clone, inspect, and run the Python source from https://github.com/jamesoflol/photobucket-blogger-migratinator. It's been tested with Python 2.7.10. The only dependency is the python requests module (pip install requests). Please feel free to raise issues or pull requests.
 
-<div id="disqus_thread"></div>
-<script>
-/**
-DISQUS COMMENTS
-*/
-(function() { // DON'T EDIT BELOW THIS LINE
-var d = document, s = d.createElement('script');
-s.src = 'https://migratinator.disqus.com/embed.js';
-s.setAttribute('data-timestamp', +new Date());
-(d.head || d.body).appendChild(s);
-})();
-</script>
-
-
 MIT License
 
 Copyright (c) 2017 jamesoflol
